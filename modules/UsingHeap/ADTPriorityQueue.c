@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
+
 
 #include "ADTPriorityQueue.h"
 #include "ADTVector.h"			// Η υλοποίηση του PriorityQueue χρησιμοποιεί Vector
@@ -17,6 +19,12 @@ struct priority_queue {
 	DestroyFunc destroy_value;	// Συνάρτηση που καταστρέφει ένα στοιχείο του vector.
 };
 
+struct priority_queue_node{
+	Pointer value;			//το value του κόμβου
+	int pos;				//η θέση του κόμβου στο heap που ξεκινάει από το 0
+	PriorityQueue owner;	//σε ποιό priority queue ανήκουν οι κόμβοι
+};
+
 
 // Βοηθητικές συναρτήσεις ////////////////////////////////////////////////////////////////////////////
 
@@ -26,22 +34,33 @@ struct priority_queue {
 // μπορούμε απλά να αφαιρούμε 1 όταν διαβάζουμε/γράφουμε στο vector. Για απλοποίηση του κώδικα, η
 // πρόσβαση στα στοιχεία του vector γίνεται από τις παρακάτω 2 βοηθητικές συναρτήσεις.
 
-// Επιστρέφει την τιμή του κόμβου node_id
 
-static Pointer node_value(PriorityQueue pqueue, int node_id) {
-	// τα node_ids είναι 1-based, το node_id αποθηκεύεται στη θέση node_id - 1
-	return vector_get_at(pqueue->vector, node_id - 1);
+//συνάρτηση για την σύγκριση των value δύο κόμβων
+static int compare_pq_nodes(Pointer a, Pointer b){
+	PriorityQueueNode one = a;
+	PriorityQueueNode two = b;
+	return one->owner->compare(one->value,two->value);
 }
 
-// Ανταλλάσει τις τιμές των κόμβων node_id1 και node_id2
+// Επιστρέφει την τιμή του κόμβου node_id
+static Pointer node_value(PriorityQueue pqueue, int node_id) {
+	// τα node_ids είναι 1-based, το node_id αποθηκεύεται στη θέση node_id - 1
+	PriorityQueueNode node = vector_get_at(pqueue->vector, (node_id-1));	//βρίσκω το pointer στην θέση του vector που βρίσκεται ο κόμβους που ψάχνουμε
+	return node == NULL ? NULL : node->value;
+}
 
+// Ανταλλάσει τις τιμές των κόμβων που βρίσκονται στις θέσεις node_id1 και node_id2
 static void node_swap(PriorityQueue pqueue, int node_id1, int node_id2) {
 	// τα node_ids είναι 1-based, το node_id αποθηκεύεται στη θέση node_id - 1
 	Pointer value1 = node_value(pqueue, node_id1);
 	Pointer value2 = node_value(pqueue, node_id2);
+	PriorityQueueNode node1 = pqueue_insert(pqueue, value1); //βρίσκει τους κόμβους με το αντίστοιχο value
+	PriorityQueueNode node2 = pqueue_insert(pqueue, value2);
+	vector_set_at(pqueue->vector, node_id1-1, node2); //τους ανταλλάσει στην καινούρια θέση
+	vector_set_at(pqueue->vector, node_id2-1, node1);
+	node1->pos = (node_id2 -1); //αλλάζει το pos των κόμβων
+	node2->pos = (node_id1 -1); 
 
-	vector_set_at(pqueue->vector, node_id1 - 1, value2);
-	vector_set_at(pqueue->vector, node_id2 - 1, value1);
 }
 
 // Αποκαθιστά την ιδιότητα του σωρού.
@@ -61,6 +80,7 @@ static void bubble_up(PriorityQueue pqueue, int node_id) {
 		node_swap(pqueue, parent, node_id);
 		bubble_up(pqueue, parent);
 	}
+
 }
 
 // Αποκαθιστά την ιδιότητα του σωρού.
@@ -84,10 +104,10 @@ static void bubble_down(PriorityQueue pqueue, int node_id) {
 
 	// Αν ο κόμβος είναι μικρότερος από το μέγιστο παιδί, swap και συνεχίζουμε προς τα κάτω
 	if (pqueue->compare(node_value(pqueue, node_id), node_value(pqueue, max_child)) < 0) {
+	
 		node_swap(pqueue, node_id, max_child);
-		bubble_down(pqueue, max_child);
+		bubble_down(pqueue, max_child);}
 	}
-}
 
 // Αρχικοποιεί το σωρό από τα στοιχεία του vector values.
 
@@ -95,9 +115,14 @@ static void naive_heapify(PriorityQueue pqueue, Vector values) {
 	// Απλά κάνουμε insert τα στοιχεία ένα ένα.
 	// TODO: υπάρχει πιο αποδοτικός τρόπος να γίνει αυτό!
 	int size = vector_size(values);
-	for (int i = 0; i < size; i++)
-		pqueue_insert(pqueue, vector_get_at(values, i));
+	for (int i = 0; i < size; i++){
+		PriorityQueueNode node = pqueue_insert(pqueue, vector_get_at(values, i));
+		int* value = node->value;
+		printf("INSERT %d \n", *value);
+	}
 }
+
+
 
 
 // Συναρτήσεις του ADTPriorityQueue //////////////////////////////////////////////////
@@ -113,7 +138,7 @@ PriorityQueue pqueue_create(CompareFunc compare, DestroyFunc destroy_value, Vect
 	// ΠΡΟΣΟΧΗ: ΔΕΝ περνάμε την destroy_value στο vector!
 	// Αν την περάσουμε θα καλείται όταν κάνουμε swap 2 στοιχεία, το οποίο δεν το επιθυμούμε.
 	pqueue->vector = vector_create(0, NULL);
-
+	
 	// Αν values != NULL, αρχικοποιούμε το σωρό.
 	if (values != NULL)
 		naive_heapify(pqueue, values);
@@ -130,17 +155,29 @@ Pointer pqueue_max(PriorityQueue pqueue) {
 }
 
 PriorityQueueNode pqueue_insert(PriorityQueue pqueue, Pointer value) {
-	// Προσθέτουμε την τιμή στο τέλος το σωρού
-	vector_insert_last(pqueue->vector, value);
+	struct priority_queue_node search_node = {.value = value, .owner = pqueue};		//βρίσκω τον κόμβο με το value στο pqueue που δίνεται ως όρισμα
 
- 	// Ολοι οι κόμβοι ικανοποιούν την ιδιότητα του σωρού εκτός από τον τελευταίο, που μπορεί να είναι
+	PriorityQueueNode node = vector_find(pqueue->vector, &search_node,(CompareFunc)compare_pq_nodes); //αναζητώ τον κόμβο στο heap μέσω του vector
+	if( node != NULL){		//αν υπάρχει ο κόμβος απλώς τον επιστρέφω
+		return vector_find(pqueue->vector, &search_node,(CompareFunc)compare_pq_nodes);
+	} 
+	//αν δεν υπάρχει δημιουργώ καινούριο	
+	node = malloc(sizeof(*node));
+
+	node->value = value;
+	
+	node->pos = pqueue_size(pqueue);	//τον βάζω στο τέλος
+	
+	node->owner = pqueue;
+
+	vector_insert_last(pqueue->vector, node);
+
+	// Ολοι οι κόμβοι ικανοποιούν την ιδιότητα του σωρού εκτός από τον τελευταίο, που μπορεί να είναι
 	// μεγαλύτερος από τον πατέρα του. Αρα μπορούμε να επαναφέρουμε την ιδιότητα του σωρού καλώντας
 	// τη bubble_up γα τον τελευταίο κόμβο (του οποίου το 1-based id ισούται με το νέο μέγεθος του σωρού).
 	bubble_up(pqueue, pqueue_size(pqueue));
 
-	// TODO: υλοποίηση κόμβων και επιστροφή.
-
-	return NULL;
+	return node;
 }
 
 void pqueue_remove_max(PriorityQueue pqueue) {
@@ -154,11 +191,11 @@ void pqueue_remove_max(PriorityQueue pqueue) {
 	// Αντικαθιστούμε τον πρώτο κόμβο με τον τελευταίο και αφαιρούμε τον τελευταίο
 	node_swap(pqueue, 1, last_node);
 	vector_remove_last(pqueue->vector);
-
+	
  	// Ολοι οι κόμβοι ικανοποιούν την ιδιότητα του σωρού εκτός από τη νέα ρίζα
  	// που μπορεί να είναι μικρότερη από κάποιο παιδί της. Αρα μπορούμε να
  	// επαναφέρουμε την ιδιότητα του σωρού καλώντας τη bubble_down για τη ρίζα.
-	bubble_down(pqueue, 1);
+	bubble_down(pqueue, 1 );
 }
 
 DestroyFunc pqueue_set_destroy_value(PriorityQueue pqueue, DestroyFunc destroy_value) {
@@ -180,14 +217,37 @@ void pqueue_destroy(PriorityQueue pqueue) {
 
 //// Νέες συναρτήσεις για την εργασία 2 //////////////////////////////////////////
 
+//Επιστρέφω το value του κόμβου node
 Pointer pqueue_node_value(PriorityQueue set, PriorityQueueNode node) {
-	return NULL;
+	return node->value;
 }
 
 void pqueue_remove_node(PriorityQueue pqueue, PriorityQueueNode node) {
+	int pos_node = (node->pos+1);	//βρίσκω την θέση του κόμβου στο vector που είναι μια "θέση" πιο μεγάλη από το pos αφού δεν ξεκινάμε από το 1 αλλά από το 0 την μέτρηση του pos
+	int last = pqueue_size(pqueue); 
+	
+		node_swap(pqueue, pos_node, last);	//ανταλλάσουμε τα περιεχόμενα του κόμβου που θέλουμε να αλλάξουμε με αυτά του τελευταίου
 
+		if (node->owner->destroy_value != NULL){
+		node->owner->destroy_value(node->value);
+	}
+	vector_remove_last(pqueue->vector);	//αφαιρούμε τον τελευταίο
+	free(node); //ελευθερώνουμε τον κόμβο
+	bubble_down(pqueue,pos_node);	// από την θέση που έχει πάει ο παλιός τελευταίος κόμβος κάνουμε bubble_down
+
+	
+	
 }
 
 void pqueue_update_order(PriorityQueue pqueue, PriorityQueueNode node) {
-
+		int pos_node = (node->pos+1);
+		int pos_parent = 2*pos_node;
+		//αν το καινούριο value είναι μεγαλύτερο από το value του πατέρα του
+		if (pqueue->compare(node_value(pqueue, pos_parent), node_value(pqueue, pos_node)) < 0) {
+		node_swap(pqueue, pos_parent, pos_node); //τότε ανταλλάσουμε πατέρα και παιδί
+		bubble_up(pqueue, pos_parent); //και κάνουμε bubble up
+	}
+	else{ //αλλιώς
+		bubble_down(pqueue, pos_node);
+	}
 }
