@@ -102,6 +102,11 @@ void pqueue_remove_node(PriorityQueue pqueue, PriorityQueueNode node){
     set_remove(pqueue->set, node->value);
         
         free(node);
-    
-        
+
 }
+
+//void pqueue_update_order(PriorityQueue pqueue, PriorityQueue node){
+  //  Pointer value = node->value;
+    //set_remove(pqueue->set, value);
+
+//}
