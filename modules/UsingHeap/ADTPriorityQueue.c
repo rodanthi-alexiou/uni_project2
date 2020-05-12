@@ -46,6 +46,7 @@ static int compare_pq_nodes(Pointer a, Pointer b){
 static Pointer node_value(PriorityQueue pqueue, int node_id) {
 	// τα node_ids είναι 1-based, το node_id αποθηκεύεται στη θέση node_id - 1
 	PriorityQueueNode node = vector_get_at(pqueue->vector, (node_id-1));	//βρίσκω το pointer στην θέση του vector που βρίσκεται ο κόμβους που ψάχνουμε
+
 	return node == NULL ? NULL : node->value;
 }
 
@@ -69,14 +70,15 @@ static void node_swap(PriorityQueue pqueue, int node_id1, int node_id2) {
 // Μετά: όλοι οι κόμβοι ικανοποιούν την ιδιότητα του σωρού.
 
 static void bubble_up(PriorityQueue pqueue, int node_id) {
-	// Αν φτάσαμε στη ρίζα, σταματάμε
-	if (node_id == 1)
-		return;
 
+	// Αν φτάσαμε στη ρίζα, σταματάμε
+		if(node_id == 1){
+		return;
+	}
 	int parent = node_id / 2;		// Ο πατέρας του κόμβου. Τα node_ids είναι 1-based
 
 	// Αν ο πατέρας έχει μικρότερη τιμή από τον κόμβο, swap και συνεχίζουμε αναδρομικά προς τα πάνω
-	if (pqueue->compare(node_value(pqueue, parent), node_value(pqueue, node_id)) < 0) {
+	if(pqueue->compare(node_value(pqueue, parent), node_value(pqueue, node_id)) < 0) {
 		node_swap(pqueue, parent, node_id);
 		bubble_up(pqueue, parent);
 	}
@@ -140,9 +142,9 @@ PriorityQueue pqueue_create(CompareFunc compare, DestroyFunc destroy_value, Vect
 	pqueue->vector = vector_create(0, NULL);
 	
 	// Αν values != NULL, αρχικοποιούμε το σωρό.
-	if (values != NULL)
+	if (values != NULL){
 		naive_heapify(pqueue, values);
-
+	}
 	return pqueue;
 }
 
@@ -156,13 +158,15 @@ Pointer pqueue_max(PriorityQueue pqueue) {
 
 PriorityQueueNode pqueue_insert(PriorityQueue pqueue, Pointer value) {
 	struct priority_queue_node search_node = {.value = value, .owner = pqueue};		//βρίσκω τον κόμβο με το value στο pqueue που δίνεται ως όρισμα
-
+	
 	PriorityQueueNode node = vector_find(pqueue->vector, &search_node,(CompareFunc)compare_pq_nodes); //αναζητώ τον κόμβο στο heap μέσω του vector
 	if( node != NULL){		//αν υπάρχει ο κόμβος απλώς τον επιστρέφω
-		return vector_find(pqueue->vector, &search_node,(CompareFunc)compare_pq_nodes);
+		return node;
 	} 
 	//αν δεν υπάρχει δημιουργώ καινούριο	
 	node = malloc(sizeof(*node));
+
+
 
 	node->value = value;
 	
@@ -171,7 +175,6 @@ PriorityQueueNode pqueue_insert(PriorityQueue pqueue, Pointer value) {
 	node->owner = pqueue;
 
 	vector_insert_last(pqueue->vector, node);
-
 	// Ολοι οι κόμβοι ικανοποιούν την ιδιότητα του σωρού εκτός από τον τελευταίο, που μπορεί να είναι
 	// μεγαλύτερος από τον πατέρα του. Αρα μπορούμε να επαναφέρουμε την ιδιότητα του σωρού καλώντας
 	// τη bubble_up γα τον τελευταίο κόμβο (του οποίου το 1-based id ισούται με το νέο μέγεθος του σωρού).
