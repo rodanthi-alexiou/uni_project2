@@ -10,6 +10,8 @@
 #include "ADTSet.h"
 
 
+
+
 // Η συνάρτηση αυτή δεν υπάρχει στο public interface του Set αλλά χρησιμεύει
 // στα tests, για να ελέγχει αν το set είναι σωστό μετά από κάθε λειτουργία.
 bool set_is_proper(Set set);
@@ -84,6 +86,9 @@ void test_insert() {
 
 	}
 
+
+
+
 	// Δοκιμάζουμε την insert με τιμές που υπάρχουν ήδη στο Set
 	// και ελέγχουμε ότι δεν ενημερώθηκε το size (καθώς δεν προστέθηκε νέος κόμβος)
 	int* new_value = create_int(0);
@@ -111,7 +116,8 @@ void test_remove() {
 
 	Set set = set_create(compare_ints, free);
 
-	int N = 1000;
+
+	int N = 10;
 	int* value_array[N];
 	for (int i = 0; i < N; i++)
 		value_array[i] = create_int(i);
@@ -121,19 +127,27 @@ void test_remove() {
 	// οι κόμβοι θα προστίθενται μόνο δεξιά της ρίζας, άρα και η set_remove δεν θα δοκιμάζεται πλήρως
 	shuffle(value_array, N);
 
-	for (int i = 0; i < N; i++)
+	for (int i = 0; i < N; i++){
 		set_insert(set, value_array[i]);
+	}
+
+
 
 	// Δοκιμάζουμε, πριν διαγράψουμε κανονικά τους κόμβους, ότι η map_remove διαχειρίζεται 
 	// σωστά ένα κλειδί που δεν υπάρχει στο Map και γυρνάει NULL 
 	int not_exists = 2000;
 	TEST_ASSERT(!set_remove(set, &not_exists));
 
+	int setsize = set_size(set);
 	// Διαγράφουμε όλους τους κόμβους
 	for (int i = 0; i < N; i++) {
 		TEST_ASSERT(set_remove(set, value_array[i]));
+
+		setsize--;
 		TEST_ASSERT(set_is_proper(set));
+		TEST_ASSERT(setsize == set_size(set));
 	}
+
 
 	set_destroy(set);
 
@@ -155,7 +169,7 @@ void test_find() {
 	
 	Set set = set_create(compare_ints, free);
 
-	int N = 1000;
+	int N = 10;
 	int* value_array[N];
 	for (int i = 0; i < N; i++)
 		value_array[i] = create_int(i);
@@ -179,6 +193,7 @@ void test_find() {
 	TEST_ASSERT(set_find_node(set, &not_exists) == SET_EOF);
 	TEST_ASSERT(set_find(set, &not_exists) == NULL);
 
+
 	// Αναζήτηση μέγιστων/ελάχιστων στοιχείων
 	// Συγκρίνουμε τις τιμές των δεικτών και όχι τους ίδιους τους δείκτες, καθώς
 	// δεν γνωρίζουμε την θέση τους μετά απο το ανακάτεμα του πίνακα, αλλά γνωρίζουμε
@@ -201,12 +216,12 @@ void test_find() {
 
 	// Ελέγχουμε και ότι βρίσκουμε σωστά τις τιμές από ενδιάμεσους κόμβους
 	SetNode middle_node = set_find_node(set, value_array[N/2]);
-	SetNode middle_node_prev = set_previous(set, middle_node);
+	SetNode middle_node_next = set_next(set, middle_node);
 
 	Pointer middle_node_value = set_node_value(set, middle_node);
-	Pointer middle_node_value_prev = set_node_value(set, middle_node_prev);
+	Pointer middle_node_value_next = set_node_value(set, middle_node_next);
 	
-	TEST_ASSERT(*(int *)middle_node_value == *(int *)middle_node_value_prev + 1);
+	TEST_ASSERT(*(int *)middle_node_value == *(int *)middle_node_value_next -1);
 
 
 	set_destroy(set);
@@ -215,7 +230,7 @@ void test_find() {
 void test_iterate() {
 	Set set = set_create(compare_ints, free);
 
-	int N = 1000;
+	int N = 10;
 	int* value_array[N];
 	for (int i = 0; i < N; i++)
 		value_array[i] = create_int(i);
@@ -228,24 +243,38 @@ void test_iterate() {
 
 	// iterate, τα στοιχεία πρέπει να τα βρούμε στη σειρά διάταξης
 	int i = 0;
-	for (SetNode node = set_first(set); node != SET_EOF; node = set_next(set, node)) {
-		TEST_ASSERT(*(int*)set_node_value(set, node) == i++);
+	
+	SetNode node = set_last(set);
+	for(int value = N-1 ; value>0; value--){
+
+		TEST_ASSERT(*(int*)set_node_value(set, node) == value);
+		node = set_previous(set, node);
 	}
 
 	// Κάποια removes
 	i = N - 1;
 	set_remove(set, &i);
-	i = 40;
+	i = 3;
 	set_remove(set, &i);
 
 	// iterate, αντίστροφη σειρά, τα στοιχεία πρέπει να τα βρούμε στη σειρά διάταξης
 	i = N - 2;
-	for (SetNode node = set_last(set); node != SET_EOF; node = set_previous(set, node)) {
-		if(i == 40)
-			i--;					// το 40 το έχουμε αφαιρέσει
-
-		TEST_ASSERT(*(int*)set_node_value(set, node) == i--);
+	SetNode nodenew = set_last(set);
+	for(int size = 0; size<set_size(set); size++){
+		if(i == 3)
+			i--;
+printf("VALUE %d\n", *(int*)set_node_value(set, nodenew));
+	TEST_ASSERT(*(int*)set_node_value(set, nodenew) == i--);	
+	node = set_previous(set, nodenew);
 	}
+
+
+	//for (SetNode node = set_last(set); node != SET_EOF; node = set_previous(set, node)) {
+	//	if(i == 40)
+	//		i--;					// το 40 το έχουμε αφαιρέσει
+
+	//	TEST_ASSERT(*(int*)set_node_value(set, node) == i--);
+	//}
 
 	set_destroy(set);
 }
