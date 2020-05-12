@@ -6,8 +6,12 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
+
 
 #include "ADTSet.h"
+#include "ADTBList.h"
+
 
 
 // Υλοποιούμε τον ADT Set μέσω BST, οπότε το struct set είναι ένα Δυαδικό Δέντρο Αναζήτησης.
@@ -16,12 +20,15 @@ struct set {
 	int size;					// μέγεθος, ώστε η set_size να είναι Ο(1)
 	CompareFunc compare;		// η διάταξη
 	DestroyFunc destroy_value;	// Συνάρτηση που καταστρέφει ένα στοιχείο του set
+	BList blist;
 };
 
 // Ενώ το struct set_node είναι κόμβος ενός Δυαδικού Δέντρου Αναζήτησης
 struct set_node {
 	SetNode left, right;		// Παιδιά
 	Pointer value;
+	BListNode blnode;
+	Set owner;
 };
 
 
@@ -41,8 +48,48 @@ static SetNode node_create(Pointer value) {
 	node->left = NULL;
 	node->right = NULL;
 	node->value = value;
+	node->blnode = malloc(sizeof(Pointer));
 	return node;
 }
+
+static int compare_set_nodes(Pointer a, Pointer b){
+	SetNode one = a;
+	SetNode two = b;
+	return one->owner->compare(one->value,two->value);
+}
+
+
+void blist_new_insert(Set set, SetNode node){
+int in = 0;
+			if(blist_size(set->blist)==0){
+			blist_insert(set->blist, blist_first(set->blist), node);
+			node->blnode = blist_first(set->blist);
+		}
+else{
+	int times = 0; 
+		for(BListNode blnode = blist_first(set->blist); times < blist_size(set->blist) ; blnode= blist_next(set->blist, blnode)){
+			SetNode previous= blist_node_value(set->blist, blnode);
+
+			if(compare_set_nodes(previous,node) < 0){
+
+				blist_insert(set->blist, blnode, node);
+				node->blnode = blist_find_node(set->blist, node, (CompareFunc) compare_set_nodes);
+				
+				in = 1;
+				break;
+			}	
+		times++;
+		}
+
+			if(in == 0){
+			blist_insert(set->blist, BLIST_EOF, node);
+			node->blnode = blist_last(set->blist);
+			}
+		}
+
+}
+
+
 
 // Επιστρέφει τον κόμβο με τιμή ίση με value στο υποδέντρο με ρίζα node, διαφορετικά NULL
 
@@ -83,57 +130,20 @@ static SetNode node_find_max(SetNode node) {
 // ή NULL αν ο target είναι ο μικρότερος του υποδέντρου. Το υποδέντρο πρέπει να περιέχει τον κόμβο
 // target, οπότε δεν μπορεί να είναι κενό.
 
-static SetNode node_find_previous(SetNode node, CompareFunc compare, SetNode target) {
-	if (node == target) {
-		// Ο target είναι η ρίζα του υποδέντρου, o προηγούμενός του είναι ο μεγαλύτερος του αριστερού υποδέντρου.
-		// (Aν δεν υπάρχει αριστερό παιδί, τότε ο κόμβος με τιμή value είναι ο μικρότερος του υποδέντρου, οπότε
-		// η node_find_max θα επιστρέψει NULL όπως θέλουμε.)
-		return node_find_max(node->left);
 
-	} else if (compare(target->value, node->value) < 0) {
-		// Ο target είναι στο αριστερό υποδέντρο, οπότε και ο προηγούμενός του είναι εκεί.
-		return node_find_previous(node->left, compare, target);
-
-	} else {
-		// Ο target είναι στο δεξί υποδέντρο, ο προηγούμενός του μπορεί να είναι επίσης εκεί, διαφορετικά
-		// ο προηγούμενός του είναι ο ίδιος ο node.
-		SetNode res = node_find_previous(node->right, compare, target);
-		return res != NULL ? res : node;
-	}
-}
-
-// Επιστρέφει τον επόμενο (στη σειρά διάταξης) του κόμβου target στο υποδέντρο με ρίζα node,
-// ή NULL αν ο target είναι ο μεγαλύτερος του υποδέντρου. Το υποδέντρο πρέπει να περιέχει τον κόμβο
-// target, οπότε δεν μπορεί να είναι κενό.
-
-static SetNode node_find_next(SetNode node, CompareFunc compare, SetNode target) {
-	if (node == target) {
-		// Ο target είναι η ρίζα του υποδέντρου, o προηγούμενός του είναι ο μεγαλύτερος του αριστερού υποδέντρου.
-		// (Aν δεν υπάρχει αριστερό παιδί, τότε ο κόμβος με τιμή value είναι ο μικρότερος του υποδέντρου, οπότε
-		// η node_find_max θα επιστρέψει NULL όπως θέλουμε.)
-		return node_find_min(node->right);
-
-	} else if (compare(target->value, node->value) > 0) {
-		// Ο target είναι στο αριστερό υποδέντρο, οπότε και ο προηγούμενός του είναι εκεί.
-		return node_find_next(node->right, compare, target);
-
-	} else {
-		// Ο target είναι στο δεξί υποδέντρο, ο προηγούμενός του μπορεί να είναι επίσης εκεί, διαφορετικά
-		// ο προηγούμενός του είναι ο ίδιος ο node.
-		SetNode res = node_find_next(node->left, compare, target);
-		return res != NULL ? res : node;
-	}
-}
 
 // Αν υπάρχει κόμβος με τιμή ισοδύναμη της value, αλλάζει την τιμή του σε value, διαφορετικά προσθέτει
 // νέο κόμβο με τιμή value. Επιστρέφει τη νέα ρίζα του υποδέντρου, και θέτει το *inserted σε true
 // αν έγινε προσθήκη, ή false αν έγινε ενημέρωση.
 
-static SetNode node_insert(SetNode node, CompareFunc compare, Pointer value, bool* inserted, Pointer* old_value) {
+static SetNode node_insert(Set set, SetNode node, CompareFunc compare, Pointer value, bool* inserted, Pointer* old_value) {
 	// Αν το υποδέντρο είναι κενό, δημιουργούμε νέο κόμβο ο οποίος γίνεται ρίζα του υποδέντρου
 	if (node == NULL) {
 		*inserted = true;			// κάναμε προσθήκη
-		return node_create(value);
+		SetNode new = node_create(value);
+		new->owner = set;
+		blist_new_insert(set, new);
+		return new;
 	}
 
 	// Το που θα γίνει η προσθήκη εξαρτάται από τη διάταξη της τιμής
@@ -148,11 +158,11 @@ static SetNode node_insert(SetNode node, CompareFunc compare, Pointer value, boo
 
 	} else if (compare_res < 0) {
 		// value < node->value, συνεχίζουμε αριστερά.
-		node->left = node_insert(node->left, compare, value, inserted, old_value);
+		node->left = node_insert(set, node->left, compare, value, inserted, old_value);
 
 	} else {
 		// value > node->value, συνεχίζουμε δεξιά
-		node->right = node_insert(node->right, compare, value, inserted, old_value);
+		node->right = node_insert(set, node->right, compare, value, inserted, old_value);
 	}
 
 	return node;	// η ρίζα του υποδέντρου δεν αλλάζει
@@ -162,7 +172,7 @@ static SetNode node_insert(SetNode node, CompareFunc compare, Pointer value, boo
 // Επιστρέφει τη νέα ρίζα του υποδέντρου.
 
 static SetNode node_remove_min(SetNode node, SetNode* min_node) {
-	if (node->left == NULL) {
+if (node->left == NULL) {
 		// Δεν έχουμε αριστερό υποδέντρο, οπότε ο μικρότερος είναι ο ίδιος ο node
 		*min_node = node;
 		return node->right;		// νέα ρίζα είναι το δεξιό παιδί
@@ -178,7 +188,7 @@ static SetNode node_remove_min(SetNode node, SetNode* min_node) {
 // Διαγράφει το κόμβο με τιμή ισοδύναμη της value, αν υπάρχει. Επιστρέφει τη νέα ρίζα του
 // υποδέντρου, και θέτει το *removed σε true αν έγινε πραγματικά διαγραφή.
 
-static SetNode node_remove(SetNode node, CompareFunc compare, Pointer value, bool* removed, Pointer* old_value) {
+static SetNode node_remove(Set set, SetNode node, CompareFunc compare, Pointer value, bool* removed, Pointer* old_value) {
 	if (node == NULL) {
 		*removed = false;		// κενό υποδέντρο, δεν υπάρχει η τιμή
 		return NULL;
@@ -186,6 +196,8 @@ static SetNode node_remove(SetNode node, CompareFunc compare, Pointer value, boo
 
 	int compare_res = compare(value, node->value);
 	if (compare_res == 0) {
+	//	BListNode found = blist_find(set->blist, value, compare_set_nodes);
+		node->blnode = NULL;
 		// Βρέθηκε ισοδύναμη τιμή στον node, οπότε τον διαγράφουμε. Το πώς θα γίνει αυτό εξαρτάται από το αν έχει παιδιά.
 		*removed = true;
 		*old_value = node->value;
@@ -193,13 +205,15 @@ static SetNode node_remove(SetNode node, CompareFunc compare, Pointer value, boo
 		if (node->left == NULL) {
 			// Δεν υπάρχει αριστερό υποδέντρο, οπότε διαγράφεται απλά ο κόμβος και νέα ρίζα μπαίνει το δεξί παιδί
 			SetNode right = node->right;	// αποθήκευση πριν το free!
-			free(node);
+			blist_remove(set->blist, node->blnode);
+			//free(node);
 			return right;
 
 		} else if (node->right == NULL) {
 			// Δεν υπάρχει δεξί υποδέντρο, οπότε διαγράφεται απλά ο κόμβος και νέα ρίζα μπαίνει το αριστερό παιδί
 			SetNode left = node->left;		// αποθήκευση πριν το free!
-			free(node);
+			blist_remove(set->blist, node->blnode);
+	//free(node);
 			return left;
 
 		} else {
@@ -213,16 +227,20 @@ static SetNode node_remove(SetNode node, CompareFunc compare, Pointer value, boo
 			min_right->left = node->left;
 			min_right->right = node->right;
 
-			free(node);
+			blist_remove(set->blist, node->blnode);
+			//free(node);
+	
 			return min_right;
 		}
+
+		
 	}
 
 	// compare_res != 0, συνεχίζουμε στο αριστερό ή δεξί υποδέντρο, η ρίζα δεν αλλάζει.
 	if (compare_res < 0)
-		node->left  = node_remove(node->left,  compare, value, removed, old_value);
+		node->left  = node_remove(set, node->left,  compare, value, removed, old_value);
 	else
-		node->right = node_remove(node->right, compare, value, removed, old_value);
+		node->right = node_remove(set, node->right, compare, value, removed, old_value);
 
 	return node;
 }
@@ -255,6 +273,7 @@ Set set_create(CompareFunc compare, DestroyFunc destroy_value) {
 	set->size = 0;
 	set->compare = compare;
 	set->destroy_value = destroy_value;
+	set->blist = blist_create(destroy_value);
 
 	return set;
 }
@@ -266,19 +285,20 @@ int set_size(Set set) {
 void set_insert(Set set, Pointer value) {
 	bool inserted;
 	Pointer old_value;
-	set->root = node_insert(set->root, set->compare, value, &inserted, &old_value);
+	set->root = node_insert(set, set->root, set->compare, value, &inserted, &old_value);
 
 	// Το size αλλάζει μόνο αν μπει νέος κόμβος. Στα updates κάνουμε destroy την παλιά τιμή
 	if (inserted)
 		set->size++;
 	else if (set->destroy_value != NULL)
 		set->destroy_value(old_value);
+	
 }
 
 bool set_remove(Set set, Pointer value) {
 	bool removed;
 	Pointer old_value = NULL;
-	set->root = node_remove(set->root, set->compare, value, &removed, &old_value);
+	set->root = node_remove(set, set->root, set->compare, value, &removed, &old_value);
 
 	// Το size αλλάζει μόνο αν πραγματικά αφαιρεθεί ένας κόμβος
 	if (removed) {
@@ -308,19 +328,24 @@ void set_destroy(Set set) {
 }
 
 SetNode set_first(Set set) {
-	return node_find_min(set->root);
+	BListNode node = blist_last(set->blist);
+	return blist_node_value(set->blist,node);
 }
 
 SetNode set_last(Set set) {
-	return node_find_max(set->root);
+	BListNode node = blist_first(set->blist);
+	return blist_node_value(set->blist,node);
 }
 
 SetNode set_previous(Set set, SetNode node) {
-	return node_find_previous(set->root, set->compare, node);
+	BListNode previous = blist_next(set->blist, node->blnode);
+	return blist_node_value(set->blist,previous);
 }
 
 SetNode set_next(Set set, SetNode node) {
-	return node_find_next(set->root, set->compare, node);
+	BListNode next = blist_previous(set->blist, node->blnode);
+	
+	return blist_node_value(set->blist,next);
 }
 
 Pointer set_node_value(Set set, SetNode node) {
