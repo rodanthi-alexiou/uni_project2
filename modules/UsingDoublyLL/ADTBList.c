@@ -40,6 +40,7 @@ BList blist_create(DestroyFunc destroy_value) {
 	blist->last= blist->dummy;
 	blist->first= blist->dummy;
 
+
 	return blist;
 }
 
@@ -48,41 +49,53 @@ int blist_size(BList blist) {
 }
 
 void blist_insert(BList blist, BListNode node, Pointer value) {
-	
+
 	BListNode new = malloc(sizeof(*new));
 	new->value = value;
 
-	if(node == BLIST_BOF){
+	if(node == blist->first){
 		new->previous = NULL;
 		new->next = blist->first;
-		if(blist->first == NULL){
+		blist->first->previous = new;
+		blist->first = new;
+		if(blist_size(blist) == 0){
 			blist->last = new;
 		}
-		else{
-			blist->first->previous = new;
-		}
-		blist->first = new;
+	}
+	else if(node == BLIST_EOF){
+		new->next = NULL;
+		new->previous = blist->last;
+		blist->last->next = new;
+		blist->last = new;
 	}
  else{
-	new->next = node;
+	//new->next = new->previous->next;
 	new->previous = node->previous;
 	node->previous = new;
+	new->next = node;
+	new->previous->next = new;
 
- }
+	if(new->previous == NULL){
+		blist->first = new;
+	}
 	
+ }
 
+	
 	blist->size++;
 
 }
 
 void blist_remove(BList blist, BListNode node) {
-		if(node == NULL){
-			node = blist->dummy;
-		}
-	
-	if(blist->destroy_value != NULL){
-		blist->destroy_value(node->value);
+
+	//	if(node == NULL){
+	//		node = blist->dummy;
+	//	}
+	if(blist_size(blist) == 1){
+		node->next = NULL;
+		node->previous = NULL;
 	}
+	else{
 	if(node==(blist->first)){
 		node->next->previous = NULL;
 		blist->first = node->next;
@@ -90,10 +103,16 @@ void blist_remove(BList blist, BListNode node) {
 	else if(node==(blist->last)){
 		node->previous->next = NULL;
 		blist->last = node->previous;
+		
 	}
 	else{
 	node->previous->next = node->next;
 	node->next->previous = node->previous;
+	}
+
+	}
+if(blist->destroy_value != NULL){
+		blist->destroy_value(node->value);
 	}
 	free(node);
 	blist->size--;
@@ -138,17 +157,19 @@ BListNode blist_first(BList blist) {
 }
 
 BListNode blist_last(BList blist) {
-	if(blist->last == blist->dummy)
-		return BLIST_EOF;
-	else
+//	if(blist->last == blist->dummy)
+//		return BLIST_EOF;
+//	else
 		return blist->last;
 }
 
 BListNode blist_next(BList blist, BListNode node) {
+	assert(node != NULL);
 	return node->next;
 }
 
 BListNode blist_previous(BList blist, BListNode node) {
+	assert(node != NULL);
 	return node->previous;
 }
 
@@ -159,9 +180,11 @@ Pointer blist_node_value(BList blist, BListNode node) {
 BListNode blist_find_node(BList blist, Pointer value, CompareFunc compare) {
 	// διάσχιση όλης της λίστας, καλούμε την compare μέχρι να επιστρέψει 0
 	//
+	
 	for (BListNode node = blist->first; node != NULL; node = node->next)
 		if (compare(value, node->value) == 0)
 			return node;		// βρέθηκε
+			
 
 	return NULL;	// δεν υπάρχει
 }
