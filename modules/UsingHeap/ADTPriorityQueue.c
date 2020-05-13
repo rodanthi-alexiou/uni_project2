@@ -115,12 +115,11 @@ static void bubble_down(PriorityQueue pqueue, int node_id) {
 
 static void naive_heapify(PriorityQueue pqueue, Vector values) {
 	// Απλά κάνουμε insert τα στοιχεία ένα ένα.
-	// TODO: υπάρχει πιο αποδοτικός τρόπος να γίνει αυτό!
+
 	int size = vector_size(values);
 	for (int i = 0; i < size; i++){
-		PriorityQueueNode node = pqueue_insert(pqueue, vector_get_at(values, i));
-		int* value = node->value;
-		printf("INSERT %d \n", *value);
+		 pqueue_insert(pqueue, vector_get_at(values, i));
+	
 	}
 }
 
@@ -231,10 +230,11 @@ void pqueue_remove_node(PriorityQueue pqueue, PriorityQueueNode node) {
 	
 		node_swap(pqueue, pos_node, last);	//ανταλλάσουμε τα περιεχόμενα του κόμβου που θέλουμε να αλλάξουμε με αυτά του τελευταίου
 
+	
+	vector_remove_last(pqueue->vector);	//αφαιρούμε τον τελευταίο
 		if (node->owner->destroy_value != NULL){
 		node->owner->destroy_value(node->value);
 	}
-	vector_remove_last(pqueue->vector);	//αφαιρούμε τον τελευταίο
 	free(node); //ελευθερώνουμε τον κόμβο
 	bubble_down(pqueue,pos_node);	// από την θέση που έχει πάει ο παλιός τελευταίος κόμβος κάνουμε bubble_down
 
