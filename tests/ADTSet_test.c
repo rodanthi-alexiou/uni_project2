@@ -230,7 +230,7 @@ void test_find() {
 void test_iterate() {
 	Set set = set_create(compare_ints, free);
 
-	int N = 10;
+	int N = 1000;
 	int* value_array[N];
 	for (int i = 0; i < N; i++)
 		value_array[i] = create_int(i);
@@ -254,27 +254,20 @@ void test_iterate() {
 	// Κάποια removes
 	i = N - 1;
 	set_remove(set, &i);
-	i = 3;
+	i = 40;
 	set_remove(set, &i);
 
 	// iterate, αντίστροφη σειρά, τα στοιχεία πρέπει να τα βρούμε στη σειρά διάταξης
 	i = N - 2;
 	SetNode nodenew = set_last(set);
-	for(int size = 0; size<set_size(set); size++){
-		if(i == 3)
+	for(int size = 1; size<set_size(set); size++){
+		if(i == 40)
 			i--;
-printf("VALUE %d\n", *(int*)set_node_value(set, nodenew));
+
 	TEST_ASSERT(*(int*)set_node_value(set, nodenew) == i--);	
-	node = set_previous(set, nodenew);
+	nodenew = set_previous(set, nodenew);
 	}
 
-
-	//for (SetNode node = set_last(set); node != SET_EOF; node = set_previous(set, node)) {
-	//	if(i == 40)
-	//		i--;					// το 40 το έχουμε αφαιρέσει
-
-	//	TEST_ASSERT(*(int*)set_node_value(set, node) == i--);
-	//}
 
 	set_destroy(set);
 }
