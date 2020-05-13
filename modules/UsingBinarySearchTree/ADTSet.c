@@ -58,6 +58,14 @@ static int compare_set_nodes(Pointer a, Pointer b){
 	return one->owner->compare(one->value,two->value);
 }
 
+// Συνάρτηση που καταστρέφει ένα map node
+static void destroy_set_node(SetNode node) {
+	if (node->owner->destroy_value != NULL)
+		node->owner->destroy_value(node->value);
+
+	free(node);
+}
+
 
 void blist_new_insert(Set set, SetNode node){
 int in = 0;
@@ -196,8 +204,10 @@ static SetNode node_remove(Set set, SetNode node, CompareFunc compare, Pointer v
 
 	int compare_res = compare(value, node->value);
 	if (compare_res == 0) {
-	//	BListNode found = blist_find(set->blist, value, compare_set_nodes);
+		BListNode new = malloc(sizeof(new));
+		new = blist_find_node(set->blist, node, (CompareFunc) compare_set_nodes);
 		node->blnode = NULL;
+		
 		// Βρέθηκε ισοδύναμη τιμή στον node, οπότε τον διαγράφουμε. Το πώς θα γίνει αυτό εξαρτάται από το αν έχει παιδιά.
 		*removed = true;
 		*old_value = node->value;
@@ -205,15 +215,15 @@ static SetNode node_remove(Set set, SetNode node, CompareFunc compare, Pointer v
 		if (node->left == NULL) {
 			// Δεν υπάρχει αριστερό υποδέντρο, οπότε διαγράφεται απλά ο κόμβος και νέα ρίζα μπαίνει το δεξί παιδί
 			SetNode right = node->right;	// αποθήκευση πριν το free!
-			blist_remove(set->blist, node->blnode);
-			//free(node);
+			blist_remove(set->blist, new);
+	
 			return right;
 
 		} else if (node->right == NULL) {
 			// Δεν υπάρχει δεξί υποδέντρο, οπότε διαγράφεται απλά ο κόμβος και νέα ρίζα μπαίνει το αριστερό παιδί
 			SetNode left = node->left;		// αποθήκευση πριν το free!
-			blist_remove(set->blist, node->blnode);
-	//free(node);
+			blist_remove(set->blist, new);
+	
 			return left;
 
 		} else {
@@ -227,8 +237,7 @@ static SetNode node_remove(Set set, SetNode node, CompareFunc compare, Pointer v
 			min_right->left = node->left;
 			min_right->right = node->right;
 
-			blist_remove(set->blist, node->blnode);
-			//free(node);
+			blist_remove(set->blist,new);
 	
 			return min_right;
 		}
@@ -273,7 +282,7 @@ Set set_create(CompareFunc compare, DestroyFunc destroy_value) {
 	set->size = 0;
 	set->compare = compare;
 	set->destroy_value = destroy_value;
-	set->blist = blist_create(destroy_value);
+	set->blist = blist_create((DestroyFunc)destroy_set_node);
 
 	return set;
 }
@@ -304,8 +313,8 @@ bool set_remove(Set set, Pointer value) {
 	if (removed) {
 		set->size--;
 
-		if (set->destroy_value != NULL)
-			set->destroy_value(old_value);
+//		if (set->destroy_value != NULL)
+//			set->destroy_value(old_value);
 	}
 
 	return old_value != NULL;
