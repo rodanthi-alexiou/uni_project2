@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "ADTPriorityQueue.h"
 #include "ADTSet.h"			// Η υλοποίηση του PriorityQueue χρησιμοποιεί Set
@@ -65,10 +66,12 @@ PriorityQueueNode pqueue_insert(PriorityQueue pqueue, Pointer value){
 
 
 void pqueue_remove_max(PriorityQueue pqueue){
+
     if(pqueue != NULL){
-        
     Pointer max = set_node_value(pqueue->set, set_last(pqueue->set));
+
     set_remove(pqueue->set, max);
+
     }
 }
 
@@ -104,9 +107,3 @@ void pqueue_remove_node(PriorityQueue pqueue, PriorityQueueNode node){
         free(node);
 
 }
-
-//void pqueue_update_order(PriorityQueue pqueue, PriorityQueue node){
-  //  Pointer value = node->value;
-    //set_remove(pqueue->set, value);
-
-//}
