@@ -18,6 +18,7 @@
 typedef struct set* Set;
 
 
+
 // Δημιουργεί και επιστρέφει ένα σύνολο, στο οποίο τα στοιχεία συγκρίνονται με βάση
 // τη συνάρτηση compare.
 // Αν destroy_value != NULL, τότε καλείται destroy_value(value) κάθε φορά που αφαιρείται ένα στοιχείο.
@@ -65,6 +66,7 @@ void set_destroy(Set set);
 #define SET_EOF (SetNode)0
 
 typedef struct set_node* SetNode;
+
 
 // Επιστρέφουν τον πρώτο και τον τελευταίο κομβο του set, ή SET_BOF / SET_EOF αντίστοιχα αν το set είναι κενό
 
