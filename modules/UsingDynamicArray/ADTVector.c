@@ -24,6 +24,7 @@ struct vector {
 	int size;					// Πόσα στοιχεία έχουμε προσθέσει
 	int capacity;				// Πόσο χώρο έχουμε δεσμεύσει (το μέγεθος του array). Πάντα capacity >= size, αλλά μπορεί να έχουμε
 	DestroyFunc destroy_value;	// Συνάρτηση που καταστρέφει ένα στοιχείο του vector.
+	int steps;
 };
 
 
@@ -40,17 +41,18 @@ Vector vector_create(int size, DestroyFunc destroy_value) {
 	//
 	vec->capacity = size < VECTOR_MIN_CAPACITY ? VECTOR_MIN_CAPACITY : size;
 	vec->array = calloc(vec->capacity, sizeof(*vec->array));		// αρχικοποίηση σε 0 (NULL)
-
+	vec->steps = 1;
 	return vec;
 }
 
 int vector_size(Vector vec) {
+	vec->steps = 1;
 	return vec->size;
 }
 
 Pointer vector_get_at(Vector vec, int pos) {
 	assert(pos >= 0 && pos < vec->size);	// LCOV_EXCL_LINE (αγνοούμε το branch από τα coverage reports, είναι δύσκολο να τεστάρουμε το false γιατί θα κρασάρει το test)
-
+	vec->steps =1;
 	return vec->array[pos].value;
 }
 
@@ -60,7 +62,7 @@ void vector_set_at(Vector vec, int pos, Pointer value) {
 	// Αν υπάρχει συνάρτηση destroy_value, την καλούμε για το στοιχείο που αντικαθίσταται
 	if (value != vec->array[pos].value && vec->destroy_value != NULL)
 		vec->destroy_value(vec->array[pos].value);
-
+	vec->steps =1;
 	vec->array[pos].value = value;
 }
 
@@ -70,7 +72,12 @@ void vector_insert_last(Vector vec, Pointer value) {
 	if (vec->capacity == vec->size) {
 		// Προσοχή: δεν πρέπει να κάνουμε free τον παλιό pointer, το κάνει η realloc
 		vec->capacity *= 2;
+		vec->steps = (vec->size + 1);
 		vec->array = realloc(vec->array, vec->capacity * sizeof(*vec->array));
+		
+	}
+	else{
+		vec->steps = 1;
 	}
 
 	// Μεγαλώνουμε τον πίνακα και προσθέτουμε το στοιχείο
@@ -87,6 +94,7 @@ void vector_remove_last(Vector vec) {
 
 	// Αφαιρούμε στοιχείο οπότε ο πίνακας μικραίνει
 	vec->size--;
+	vec->steps = 1;
 
 	// Μικραίνουμε τον πίνακα αν χρειαστεί, ώστε να μην υπάρχει υπερβολική σπατάλη χώρου.
 	// Για την πολυπλοκότητα είναι σημαντικό να μειώνουμε το μέγεθος στο μισό, και μόνο
@@ -95,21 +103,24 @@ void vector_remove_last(Vector vec) {
 	if (vec->capacity > vec->size * 4 && vec->capacity > 2*VECTOR_MIN_CAPACITY) {
 		vec->capacity /= 2;
 		vec->array = realloc(vec->array, vec->capacity * sizeof(*vec->array));
+		vec->steps = vec->size;
 	}
 }
 
 Pointer vector_find(Vector vec, Pointer value, CompareFunc compare) {
 	// Διάσχιση του vector
 	for (int i = 0; i < vec->size; i++)
-		if (compare(vec->array[i].value, value) == 0)
+		if (compare(vec->array[i].value, value) == 0){
+			vec->steps = i;
 			return vec->array[i].value;		// βρέθηκε
-
+		}
 	return NULL;				// δεν υπάρχει
 }
 
 DestroyFunc vector_set_destroy_value(Vector vec, DestroyFunc destroy_value) {
 	DestroyFunc old = vec->destroy_value;
 	vec->destroy_value = destroy_value;
+	vec->steps = 1;
 	return old;
 }
 
@@ -128,6 +139,7 @@ void vector_destroy(Vector vec) {
 // Συναρτήσεις για διάσχιση μέσω node /////////////////////////////////////////////////////
 
 VectorNode vector_first(Vector vec) {
+	vec->steps = 1;
 	if (vec->size == 0)
 		return VECTOR_BOF;
 	else	
@@ -135,6 +147,7 @@ VectorNode vector_first(Vector vec) {
 }
 
 VectorNode vector_last(Vector vec) {
+	vec->steps = 1;
 	if (vec->size == 0)
 		return VECTOR_EOF;
 	else
@@ -142,6 +155,7 @@ VectorNode vector_last(Vector vec) {
 }
 
 VectorNode vector_next(Vector vec, VectorNode node) {
+	vec->steps = 1;
 	if (node == &vec->array[vec->size-1])
 		return VECTOR_EOF;
 	else
@@ -149,6 +163,7 @@ VectorNode vector_next(Vector vec, VectorNode node) {
 }
 
 VectorNode vector_previous(Vector vec, VectorNode node) {
+	vec->steps = 1;
 	if (node == &vec->array[0])
 		return VECTOR_EOF;
 	else
@@ -156,14 +171,20 @@ VectorNode vector_previous(Vector vec, VectorNode node) {
 }
 
 Pointer vector_node_value(Vector vec, VectorNode node) {
+	vec->steps = 1;
 	return node->value;
 }
 
 VectorNode vector_find_node(Vector vec, Pointer value, CompareFunc compare) {
 	// Διάσχιση του vector
 	for (int i = 0; i < vec->size; i++)
-		if (compare(vec->array[i].value, value) == 0)
+		if (compare(vec->array[i].value, value) == 0){
+			vec->steps = i;
 			return &vec->array[i];		// βρέθηκε
-
+		}
 	return VECTOR_EOF;				// δεν υπάρχει
+}
+
+int vector_steps(Vector vec){
+	return vec->steps;
 }
