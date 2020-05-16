@@ -32,17 +32,9 @@ struct set_node {
 };
 
 
-// Παρατηρήσεις για τις node_* συναρτήσεις
-// - είναι βοηθητικές (κρυφές από το χρήστη) και υλοποιούν διάφορες λειτουργίες πάνω σε κόμβους του BST.
-// - είναι αναδρομικές, η αναδρομή είναι γενικά πολύ βοηθητική στα δέντρα.
-// - όσες συναρτήσεις _τροποποιούν_ το δέντρο, ουσιαστικά ενεργούν στο _υποδέντρο_ με ρίζα τον κόμβο node, και επιστρέφουν τη νέα
-//   ρίζα του υποδέντρου μετά την τροποποίηση. Η νέα ρίζα χρησιμοποιείται από την προηγούμενη αναδρομική κλήση.
-//
-// Οι set_* συναρτήσεις (πιο μετά στο αρχείο), υλοποιούν τις συναρτήσεις του ADT Set, και είναι απλές, καλώντας τις αντίστοιχες node_*.
-
+//EXTRA ΣΥΝΑΡΤΗΣΕΙΣ ΓΙΑ ΤΗΝ ΑΣΚΗΣΗ 5 ΤΗΣ 2ης ΕΡΓΑΣΙΑΣ
 
 // Δημιουργεί και επιστρέφει έναν κόμβο με τιμή value (χωρίς παιδιά)
-
 static SetNode node_create(Pointer value) {
 	SetNode node = malloc(sizeof(*node));
 	node->left = NULL;
@@ -52,13 +44,14 @@ static SetNode node_create(Pointer value) {
 	return node;
 }
 
-static int compare_set_nodes(Pointer a, Pointer b){
+//Συγκρίνει SetNodes μέσω τον values τους
+static int compare_set_nodes(Pointer a, Pointer b){		
 	SetNode one = a;
 	SetNode two = b;
 	return one->owner->compare(one->value,two->value);
 }
 
-// Συνάρτηση που καταστρέφει ένα map node
+// Συνάρτηση που καταστρέφει ένα SetNode
 static void destroy_set_node(SetNode node) {
 	if (node->owner->destroy_value != NULL)
 		node->owner->destroy_value(node->value);
@@ -66,30 +59,30 @@ static void destroy_set_node(SetNode node) {
 	free(node);
 }
 
-
+//Συνάρτηση που εισάγει ένα στοιχείο σε μια blist με όρισμα SetNode με διατεταγμένη σειρά
 void blist_new_insert(Set set, SetNode node){
 int in = 0;
-			if(blist_size(set->blist)==0){
+
+			if(blist_size(set->blist)==0){	//αν η blist είναι κενή εισάγουμε το στοιχείο στην αρχή
 			blist_insert(set->blist, blist_first(set->blist), node);
-			node->blnode = blist_first(set->blist);
+			node->blnode = blist_first(set->blist); //ενημερώνουμε το BListNode του SetNode
 		}
 else{
 	int times = 0; 
+	//με μια επανάληψη βρίσκουμε το πρώτο στοιχείο που είναι πιο μικρό από το value του setnode που θέλουμε να κάνουμε insert και τότε κάνουμε insert το setnode πριν το blistnode με το μικρότερο value
 		for(BListNode blnode = blist_first(set->blist); times < blist_size(set->blist) ; blnode= blist_next(set->blist, blnode)){
 			SetNode previous= blist_node_value(set->blist, blnode);
 
 			if(compare_set_nodes(previous,node) < 0){
 
 				blist_insert(set->blist, blnode, node);
-				node->blnode = blist_find_node(set->blist, node, (CompareFunc) compare_set_nodes);
-				
-				in = 1;
-				break;
+				node->blnode = blist_find_node(set->blist, node, (CompareFunc) compare_set_nodes);		//ως compare χρειαζόμαστε την compare για nodes
+				in=1; //δείκτης που λέει ότι έχει γίνει insert το setnode
+				break; //τότε σταματάμε την επανάληψη
 			}	
 		times++;
 		}
-
-			if(in == 0){
+			if(in==0){ 		//αν το στοιχείο δεν έχει γίνει insert τότε το προσθέτουμε τελευταίο
 			blist_insert(set->blist, BLIST_EOF, node);
 			node->blnode = blist_last(set->blist);
 			}
@@ -99,8 +92,10 @@ else{
 
 
 
-// Επιστρέφει τον κόμβο με τιμή ίση με value στο υποδέντρο με ρίζα node, διαφορετικά NULL
 
+//ΣΥΝΑΡΤΗΣΕΙΣ ΓΙΑ ΤΟ BINARY SEARCH TREE
+
+// Επιστρέφει τον κόμβο με τιμή ίση με value στο υποδέντρο με ρίζα node, διαφορετικά NULL
 static SetNode node_find_equal(SetNode node, CompareFunc compare, Pointer value) {
 	// κενό υποδέντρο, δεν υπάρχει η τιμή
 	if (node == NULL)
@@ -134,9 +129,7 @@ static SetNode node_find_max(SetNode node) {
 		: node;									// Αλλιώς η μεγαλύτερη τιμή είναι στο ίδιο το node
 }
 
-// Επιστρέφει τον προηγούμενο (στη σειρά διάταξης) του κόμβου target στο υποδέντρο με ρίζα node,
-// ή NULL αν ο target είναι ο μικρότερος του υποδέντρου. Το υποδέντρο πρέπει να περιέχει τον κόμβο
-// target, οπότε δεν μπορεί να είναι κενό.
+
 
 
 
@@ -144,13 +137,15 @@ static SetNode node_find_max(SetNode node) {
 // νέο κόμβο με τιμή value. Επιστρέφει τη νέα ρίζα του υποδέντρου, και θέτει το *inserted σε true
 // αν έγινε προσθήκη, ή false αν έγινε ενημέρωση.
 
+//ΚΑΙ ΚΑΝΕΙ INSERT ΤΟ SETNODE ΣΤΟ BLIST
+
 static SetNode node_insert(Set set, SetNode node, CompareFunc compare, Pointer value, bool* inserted, Pointer* old_value) {
 	// Αν το υποδέντρο είναι κενό, δημιουργούμε νέο κόμβο ο οποίος γίνεται ρίζα του υποδέντρου
 	if (node == NULL) {
 		*inserted = true;			// κάναμε προσθήκη
-		SetNode new = node_create(value);
+		SetNode new = node_create(value);	//ΔΗΜΙΟΥΡΓΏ SETNODE
 		new->owner = set;
-		blist_new_insert(set, new);
+		blist_new_insert(set, new);		//ΚΑΛΩ ΤΗΝ ΣΥΝΑΡΤΗΣΗ ΓΙΑ ΝΑ ΤΟ ΚΑΝΕΙ INSERT ΣΤΗΝ BLIST
 		return new;
 	}
 
@@ -204,9 +199,9 @@ static SetNode node_remove(Set set, SetNode node, CompareFunc compare, Pointer v
 
 	int compare_res = compare(value, node->value);
 	if (compare_res == 0) {
-		BListNode new = malloc(sizeof(new));
-		new = blist_find_node(set->blist, node, (CompareFunc) compare_set_nodes);
-		node->blnode = NULL;
+		BListNode new = malloc(sizeof(new));		//ΔΗΜΙΟΥΡΓΩ ΕΝΑ BLISTNODE
+		new = blist_find_node(set->blist, node, (CompareFunc) compare_set_nodes); //ΔΕΙΧΝΕΙ ΣΤΟ SETNODE ΠΟΥ ΕΙΝΑΙ ΑΠΟΘΗΚΕΥΜΕΝΟ ΣΤΟ BLISTNODE ΠΟΥ ΘΕΛΩ ΝΑ ΑΦΑΙΡΕΣΩ
+		node->blnode = NULL; //ΑΛΛΑΖΩ ΑΡΧΙΚΑ ΠΟΥ ΔΕΙΧΝΕΙ ΤΟ BLISTNODE ΜΕΣΩ ΣΤΟ ΙΔΙΟ ΤΟ SETNODE ΚΑΙ ΜΕΤΑ ΤΟ ΑΦΑΙΡΩ ΜΕΣΩ BLIST_REMOVE (ΑΝΑΛΟΓΑ ΜΕ ΤΗΝ ΠΕΡΙΠΤΩΣΗ:)
 		
 		// Βρέθηκε ισοδύναμη τιμή στον node, οπότε τον διαγράφουμε. Το πώς θα γίνει αυτό εξαρτάται από το αν έχει παιδιά.
 		*removed = true;
@@ -312,9 +307,6 @@ bool set_remove(Set set, Pointer value) {
 	// Το size αλλάζει μόνο αν πραγματικά αφαιρεθεί ένας κόμβος
 	if (removed) {
 		set->size--;
-
-//		if (set->destroy_value != NULL)
-//			set->destroy_value(old_value);
 	}
 
 	return old_value != NULL;
@@ -337,24 +329,23 @@ void set_destroy(Set set) {
 }
 
 SetNode set_first(Set set) {
-	BListNode node = blist_last(set->blist);
-	return blist_node_value(set->blist,node);
+	BListNode node = blist_last(set->blist);		//βρίσκω με σταθερή πολυπλοκότητα το τελευταίο στοιχείο του blist που θα είναι το μικρότερο
+	return blist_node_value(set->blist,node);		//επιστρέφω to value του (δλδ SETNODE) με σταθερή πολυπλοκότητα
 }
 
 SetNode set_last(Set set) {
-	BListNode node = blist_first(set->blist);
-	return blist_node_value(set->blist,node);
+	BListNode node = blist_first(set->blist); //βρίσκω με σταθερή πολυπλοκότητα το πρώτο στοιχείο του blist που θα είναι το μικρότερο
+	return blist_node_value(set->blist,node);  //επιστρέφω to value του (δλδ SETNODE) με σταθερή πολυπλοκότητα
 }
 
 SetNode set_previous(Set set, SetNode node) {
-	BListNode previous = blist_next(set->blist, node->blnode);
-	return blist_node_value(set->blist,previous);
+	BListNode previous = blist_next(set->blist, node->blnode);		//βρίσκω με σταθερή πολυπλοκότητα το προηγούμενο blistnode του blistnode που έχω αποθηκεύσει στο setnode
+	return blist_node_value(set->blist,previous);	//επιστρέφω to value του (δλδ SETNODE) με σταθερή πολυπλοκότητα
 }
 
 SetNode set_next(Set set, SetNode node) {
-	BListNode next = blist_previous(set->blist, node->blnode);
-	
-	return blist_node_value(set->blist,next);
+	BListNode next = blist_previous(set->blist, node->blnode); //βρίσκω με σταθερή πολυπλοκότητα το επόμενο blistnode του blistnode που έχω αποθηκεύσει στο setnode
+	return blist_node_value(set->blist,next);  //επιστρέφω to value του (δλδ SETNODE) με σταθερή πολυπλοκότητα
 }
 
 Pointer set_node_value(Set set, SetNode node) {
