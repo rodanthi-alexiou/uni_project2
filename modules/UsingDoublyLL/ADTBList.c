@@ -21,8 +21,8 @@ struct blist {
 };
 
 struct blist_node {
-	BListNode next;
-	BListNode previous;
+	BListNode next;		//κρατάμε τον επόμενο blistnode
+	BListNode previous;	//όπως και τον επόμενο
 	Pointer value;
 };
 
@@ -50,34 +50,30 @@ int blist_size(BList blist) {
 
 void blist_insert(BList blist, BListNode node, Pointer value) {
 
-	BListNode new = malloc(sizeof(*new));
+	BListNode new = malloc(sizeof(*new));	//δεσμεύω μνήμη για καινούριο node
 	new->value = value;
-
-	if(node == blist->first){
-		new->previous = NULL;
-		new->next = blist->first;
-		blist->first->previous = new;
-		blist->first = new;
+//δεν χρησιμοποιώ τον dummy γιαυτό παίρνω περιπτώσεις αν ο node είναι ο πρώτος ή αν είναι BLIST_EOF
+	if(node == blist->first){		//αν είναι το πρώτο στοιχείο του blist
+		new->previous = NULL;			//ο προηγούμενος του καινούριου node θα είναι NULL αφού θα είναι ο πρώτος
+		new->next = blist->first; 		//ο επόμενος του θα είναι το πρώτο στοιχείο του blist
+		blist->first->previous = new;	//ο προηγούμενος του πρώτου θα είναι ο new
+		blist->first = new;		//ανανεώνουμε το blist->first
 		if(blist_size(blist) == 0){
-			blist->last = new;
+			blist->last = new;		//αν δεν υπάρχει άλλα στοιχείο το new ειναι και το πρώτο και το τελευταίο στοιχείο της λίστας
 		}
 	}
-	else if(node == BLIST_EOF){
+	else if(node == BLIST_EOF){		//	insert στο τέλος της λίστας
 		new->next = NULL;
 		new->previous = blist->last;
 		blist->last->next = new;
-		blist->last = new;
+		blist->last = new;		//ανανεώνουμε τον καινούριο τελευταίο κόμβο
 	}
  else{
-	//new->next = new->previous->next;
+	//ΑΛΛΙΩΣ
 	new->previous = node->previous;
 	node->previous = new;
 	new->next = node;
 	new->previous->next = new;
-
-	if(new->previous == NULL){
-		blist->first = new;
-	}
 	
  }
 
@@ -88,10 +84,7 @@ void blist_insert(BList blist, BListNode node, Pointer value) {
 
 void blist_remove(BList blist, BListNode node) {
 
-	//	if(node == NULL){
-	//		node = blist->dummy;
-	//	}
-	if(blist_size(blist) == 1){
+	if(blist_size(blist) == 1){		//αν υπάρχει μόνο ένα στοιχείο στην λίστα απλώς ο προηγούμενος και επόμενος node είναι NULL
 		node->next = NULL;
 		node->previous = NULL;
 	}
@@ -137,7 +130,7 @@ void blist_destroy(BList blist) {
 	while (node != NULL) {				// while αντί για for, γιατί θέλουμε να διαβάσουμε
 		BListNode next = node->next;		// το node->next _πριν_ κάνουμε free!
 
-		// Καλούμε τη destroy_value, αν υπάρχει (προσοχή, όχι στον dummy!)
+		// Καλούμε τη destroy_value, αν υπάρχει
 		if (node != blist->dummy && blist->destroy_value != NULL)
 			blist->destroy_value(node->value);
 
@@ -157,9 +150,6 @@ BListNode blist_first(BList blist) {
 }
 
 BListNode blist_last(BList blist) {
-//	if(blist->last == blist->dummy)
-//		return BLIST_EOF;
-//	else
 		return blist->last;
 }
 
