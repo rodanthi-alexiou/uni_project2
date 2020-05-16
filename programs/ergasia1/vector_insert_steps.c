@@ -10,9 +10,9 @@ int* create_int(int value) {
 }
 
 int main(int argc, char *argv[]){
-        Vector vec = vector_create(1000, NULL);
+        Vector vec = vector_create(10000, NULL);
 int total, previous, newtotal;
-    for(int n = 1; n<1005 ; n++){
+    for(int n = 1; n<1000 ; n++){
         vector_insert_last(vec, create_int(n));
         total = vector_steps(vec);
     
