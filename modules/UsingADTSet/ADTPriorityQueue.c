@@ -12,7 +12,7 @@
 #include "ADTSet.h"			// Η υλοποίηση του PriorityQueue χρησιμοποιεί Set
 
 struct priority_queue{
-    Set set;
+    Set set;        //στο set που αποθηκεύονται τα values
     CompareFunc compare;
     DestroyFunc destroy_value;
 };
@@ -22,6 +22,7 @@ struct priority_queue_node{
     
 };
 
+//ΣΥΝΑΡΤΗΣΗ για δημιουργία ενός PriorityQueueNode
 static PriorityQueueNode pqnode_create(Pointer value){
     PriorityQueueNode node = malloc(sizeof(*node));
     node->value = value;
@@ -34,12 +35,12 @@ PriorityQueue pqueue_create(CompareFunc compare, DestroyFunc destroy_value, Vect
     PriorityQueue pqueue = malloc(sizeof(*pqueue));
     pqueue->compare = compare;
     pqueue->destroy_value = destroy_value;
-    pqueue->set = set_create(compare,destroy_value);
+    pqueue->set = set_create(compare,destroy_value);    //δημιουργώ το set και περνάω ως destroy_value εκείνο που δέχομαι ως όρισμα
 
     if(values!=NULL){
         int size = vector_size(values);
         for(int i=0; i<size; i++){
-            set_insert(pqueue->set, vector_get_at(values, i));
+            set_insert(pqueue->set, vector_get_at(values, i));      //με μια επανάληψη κάνω insert όλα τα στοιχεία που έχω από το vector στο set
         }
     }
 
@@ -54,13 +55,13 @@ int pqueue_size(PriorityQueue pqueue){
 
 
 Pointer pqueue_max(PriorityQueue pqueue){
-    return set_node_value(pqueue->set, set_last(pqueue->set));
+    return set_node_value(pqueue->set, set_last(pqueue->set));      //επιστρέφω το value του τελευταίου στοιχείου του set
 }
 
 
 PriorityQueueNode pqueue_insert(PriorityQueue pqueue, Pointer value){
-   set_insert(pqueue->set, value);
-   PriorityQueueNode node = pqnode_create(value);
+   set_insert(pqueue->set, value);      //κανω insert το value στο set
+   PriorityQueueNode node = pqnode_create(value);       //δημιουργώ το pqnode με το ίδιο value
    return node;
 }
 
@@ -68,9 +69,9 @@ PriorityQueueNode pqueue_insert(PriorityQueue pqueue, Pointer value){
 void pqueue_remove_max(PriorityQueue pqueue){
 
     if(pqueue != NULL){
-    Pointer max = set_node_value(pqueue->set, set_last(pqueue->set));
+    Pointer max = set_node_value(pqueue->set, set_last(pqueue->set)); //βρίσκω το μεγαλύτερο στοιχείο του set
 
-    set_remove(pqueue->set, max);
+    set_remove(pqueue->set, max); //αφαιρώ αυτό το στοιχείο από το set
 
     }
 }
@@ -102,8 +103,8 @@ Pointer pqueue_node_value(PriorityQueue set, PriorityQueueNode node){
 // (μη ορισμένη συμπεριφορά αν δεν ανήκει στην ουρά).
 
 void pqueue_remove_node(PriorityQueue pqueue, PriorityQueueNode node){
-    set_remove(pqueue->set, node->value);
+    set_remove(pqueue->set, node->value);       //αφαιρώ το value της node από το set 
         
-        free(node);
+        free(node);     //ελευθερώνω την μνήμη για το node
 
 }
